@@ -24,7 +24,10 @@ Imagine Asha sends three messages to Ravi: “Hi!”, “Are you free?” and �
 
 The important distinction is between arrival and display. We cannot force a delayed packet to arrive earlier, but we can decide when a received message becomes visible. A later message may be accepted into temporary storage without being displayed immediately.
 
-This solution handles one ordered sender stream. For a two-way chat, each direction can maintain its own sequence state. Establishing one shared order across messages from both users is a separate requirement.</p></section><section id="section-1"><h2>02) Why messages can arrive out of order</h2><p class="prose">Messages pass through networks, servers and application components before reaching the recipient. Different processing delays, retries, concurrent requests or reconnections can make a later application message available before an earlier one. For example, message 1 may require a retry while message 3 completes quickly.
+This solution handles one ordered sender stream. For a two-way chat, each direction can maintain its own sequence state. Establishing one shared order across messages from both users is a separate requirement.
+
+The core computational challenge
+The receiver must reconstruct the sender’s sequence from unordered arrivals, suppress duplicates, and release only the longest consecutive prefix. It must decide whether the exact next message is available without repeatedly scanning or sorting every waiting message. Correctness means never displaying a later message across an unresolved gap; progress depends on missing messages eventually arriving.</p></section><section id="section-1"><h2>02) Why messages can arrive out of order</h2><p class="prose">Messages pass through networks, servers and application components before reaching the recipient. Different processing delays, retries, concurrent requests or reconnections can make a later application message available before an earlier one. For example, message 1 may require a retry while message 3 completes quickly.
 
 Be precise about the transport: TCP provides an ordered byte stream within one connection, and WebSocket messages on a single connection inherit that ordering. We do not need to repair packet ordering inside TCP ourselves. Application-level sequence numbers become useful when messages span multiple connections, independent operations, asynchronous workers or reconnect/replay paths.
 
@@ -52,7 +55,15 @@ Reorder-buffer operations
 The buffer is a map, not the sender FIFO queue. INSERT stores a message under its sequence number; CONTAINS checks whether a sequence is present; GET reads its message; REMOVE deletes it after release. The receiver asks for one exact key—expected—so it does not need to sort the entire map.
 
 Message record
-A message record contains stream_id, sequence and payload. The queue stores these records. At the receiver, stream_id selects the correct state, sequence selects the map entry, and payload supplies the text to display. The display queue receives records only after gaps have been filled.</p></section><section id="section-3"><h2>04) The receiving algorithm, step by step</h2><p class="prose">Step 1 — Identify the stream.
+A message record contains stream_id, sequence and payload. The queue stores these records. At the receiver, stream_id selects the correct state, sequence selects the map entry, and payload supplies the text to display. The display queue receives records only after gaps have been filled.
+
+Why a naive array or linear list does not scale
+Appending arrivals to an ordinary FIFO list displays arrival order, which may be wrong. Holding arrivals in an unsorted array fixes neither lookup nor gap detection: finding expected can require scanning b buffered records, costing O(b) per search. Duplicate checks can also require O(b). Repeated scans over a growing buffer can reach O(n²) total work for n messages. Removing from the middle of an array can additionally shift O(b) records.
+
+Sorting the entire buffer after every arrival costs O(b log b) per sort. Even a sorted collection must stop at a missing sequence; sorting available messages does not prove that an earlier message is absent permanently. A simple linked list avoids array shifts but still takes O(b) to locate an arbitrary sequence. A sender array that removes index 0 also incurs O(q) shifts for queue length q; a linked queue with front/rear pointers, deque or circular buffer avoids this.
+
+Why this combination is suitable
+A FIFO queue preserves local creation order, a sequence number defines each message’s position, and a hash map finds the exact expected record in O(1) expected time. The display queue separates ordered release from UI rendering. These structures address different operations, so replacing all of them with one unsorted list would sacrifice either correctness or efficient lookup.</p></section><section id="section-3"><h2>04) The receiving algorithm, step by step</h2><p class="prose">Step 1 — Identify the stream.
 Look up the receiver state for this conversation and sender stream. Each stream has its own expected counter and reorder buffer. Do not combine unrelated users’ sequence numbers in a single buffer.
 
 Step 2 — Check for an old duplicate.
@@ -166,7 +177,10 @@ Define what “acknowledged” means. An acknowledgement for temporary receipt i
 
 This pause is called head-of-line blocking: one missing earlier message delays all later messages in the same ordered stream. It is the cost of strict ordering. Independent streams can continue while the affected stream waits.
 
-If a message permanently cannot be delivered, the product needs an explicit recovery policy. It may show a delivery error and halt the stream, or introduce an agreed gap marker. Skipping without such a policy changes the original guarantee.</p></section><section id="section-8"><h2>09) Reconnections, persistence and duplicates</h2><p class="prose">A reconnect should not automatically reset expected to 1 while continuing the same stream. Old packets could then be mistaken for new messages, and newly assigned numbers might collide with earlier ones.
+If a message permanently cannot be delivered, the product needs an explicit recovery policy. It may show a delivery error and halt the stream, or introduce an agreed gap marker. Skipping without such a policy changes the original guarantee.
+
+Network partitions and unavailable peers
+During a partition, an acknowledgement or missing message may be unreachable for a long time. Keep later records buffered within a bounded receive window, use retry backoff, and show a connection or delivery status. After reconnection, request replay from durable progress. Strict ordering cannot guarantee continued display when an earlier record is unavailable; silently skipping it would weaken the guarantee. Apply backpressure when retry queues or buffers reach capacity.</p></section><section id="section-8"><h2>09) Reconnections, persistence and duplicates</h2><p class="prose">A reconnect should not automatically reset expected to 1 while continuing the same stream. Old packets could then be mistaken for new messages, and newly assigned numbers might collide with earlier ones.
 
 Two common designs are: persist and resume the existing stream’s sequence state, or create a fresh stream identifier for the new session. If sessions are separate streams, ordering across them still needs a defined reconciliation rule.
 
@@ -174,7 +188,13 @@ Persist the sender’s next number and outstanding messages if they must survive
 
 Retries commonly produce at-least-once transport behavior: the same message may arrive multiple times. The ordering layer can suppress duplicates within its remembered stream state, but this alone does not guarantee exactly-once side effects across crashes. For external actions, such as issuing a notification, use idempotent operations or durable deduplication records.
 
-A useful message identity is the tuple (conversation ID, sender ID, stream ID, sequence number). This distinguishes message 3 in one conversation from message 3 in another.</p></section><section id="section-9"><h2>10) Complexity and choosing the right container</h2><p class="prose">A FIFO queue implemented with a deque supports enqueue and dequeue in O(1) time. A hash-map reorder buffer supports insertion, duplicate checks and lookup of expected in O(1) expected time per operation.
+A useful message identity is the tuple (conversation ID, sender ID, stream ID, sequence number). This distinguishes message 3 in one conversation from message 3 in another.
+
+Concurrent updates and crashes
+Allocate sender sequence numbers and enqueue records atomically. At the receiver, serialize updates for each stream using one worker or a lock, so checking a sequence, inserting a record, releasing the prefix and advancing expected cannot race. Serialize display-queue consumption too. Persist messages and committed progress together when recovery is required; retain durable message identities to avoid repeat side effects after a restart.
+
+Invalid input and conflicting records
+Validate stream identifiers, positive sequence numbers, payload size and receive-window bounds. Two different payloads with the same message identity are a protocol error; reject or flag the conflict instead of silently overwriting a record. A client or server failure may lose volatile state, so durable replay and a documented recovery policy are needed. Sensor failure is not part of a text-chat application, but the analogous failure here is an unavailable sender, crashed process or malformed message source.</p></section><section id="section-9"><h2>10) Complexity and choosing the right container</h2><p class="prose">A FIFO queue implemented with a deque supports enqueue and dequeue in O(1) time. A hash-map reorder buffer supports insertion, duplicate checks and lookup of expected in O(1) expected time per operation.
 
 One receive call may release k waiting messages, so its work is O(k + 1) expected. Across n processed arrivals, each accepted message is inserted at most once and removed at most once; total expected processing is O(n). These bounds assume well-behaved hashing and do not include network, storage or rendering costs.
 
@@ -182,7 +202,16 @@ Buffer space is O(b), where b is the number of messages waiting behind gaps. Sen
 
 Set a maximum receive window, message-size limit and buffer capacity. Reject or defer packets far beyond expected and ask the sender to retransmit within the allowed window. Report this condition rather than silently dropping messages while promising reliable delivery.
 
-A min-heap can reveal the smallest buffered sequence, with O(log b) insertion and removal, but it still needs gap detection and duplicate handling. A hash map is simpler when the main operation is “does the exact expected number exist?”. A fixed ring buffer is another option for a bounded sequence window, provided wraparound is handled carefully.</p></section><section id="section-10"><h2>11) Test cases and common mistakes</h2><p class="prose">Test normal arrivals 1 → 2 → 3: every message should be released immediately. Test reversed arrivals 3 → 2 → 1: nothing should appear until 1 arrives, then the entire consecutive block should be released.
+A min-heap can reveal the smallest buffered sequence, with O(log b) insertion and removal, but it still needs gap detection and duplicate handling. A hash map is simpler when the main operation is “does the exact expected number exist?”. A fixed ring buffer is another option for a bounded sequence window, provided wraparound is handled carefully.
+
+Comparison of the main operations
+Unsorted array/list: expected-message lookup and duplicate detection take O(b); repeated searches may require O(n²) total work.
+Repeated sorting: O(b log b) per arrival to sort the current buffer, plus release work.
+FIFO queue with front/rear pointers or deque: O(1) enqueue/dequeue for the abstract queue; a dynamically resized circular array typically gives amortized O(1) enqueue.
+Hash-map buffer: expected O(1) insert, lookup and removal; pathological collisions can degrade an individual operation to O(b).
+Balanced search tree alternative: O(log b) worst-case insert, lookup and removal, with O(b) space, useful when deterministic bounds are more important than average speed.
+
+Total storage includes O(b + q + d + r): b buffered arrivals, q outgoing messages, d released messages waiting for UI consumption, and r retained retry records. Without capacity limits, a partition or stalled UI can grow any of these queues. Sequence metadata is O(1) per message and per-stream state must be maintained separately.</p></section><section id="section-10"><h2>11) Test cases and common mistakes</h2><p class="prose">Test normal arrivals 1 → 2 → 3: every message should be released immediately. Test reversed arrivals 3 → 2 → 1: nothing should appear until 1 arrives, then the entire consecutive block should be released.
 
 Test duplicates before and after release. For 3 → 3 → 1 → 2 → 2, message 3 should occupy only one buffer entry and message 2 should appear only once. Test a gap such as 1 → 3: the visible output must stop at 1.
 
