@@ -1,0 +1,197 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A detailed explanation of Problem 20: ordered message delivery using queues, sequence numbers and a reorder buffer."><title>In Sequence | Message Queue Blog</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:#18383c;background:#b6e7dd;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;background-image:radial-gradient(circle at 95% 8%,#bd9bed99 0,transparent 35%),linear-gradient(140deg,#b6e7dd,#a5d8ee 70%,#b4bbe9)}button,input,textarea{font:inherit}button,a,input,textarea{outline-offset:5px}button{cursor:pointer;border:1px solid #285857;background:#d3eee1;padding:10px 18px;border-radius:24px;color:#18383c;font-weight:700}button:disabled{opacity:.5;cursor:default}button:hover:not(:disabled){background:#c9f785}a{color:inherit}header{max-width:1260px;margin:auto;padding:25px 40px;border-bottom:1px solid #28585744;display:flex;justify-content:space-between;align-items:center;gap:15px}.brand{text-decoration:none;font-size:23px;font-weight:800;display:flex;align-items:center;gap:10px}.mark{background:#6433ba;color:#ddfa9c;border-radius:11px;padding:2px 12px}.journal{font-size:12px;letter-spacing:1px;font-weight:400;margin-left:12px}main{max-width:1180px;margin:auto;padding:42px 32px}.eyebrow{font-size:13px;letter-spacing:2px;font-weight:700;display:flex;gap:22px;align-items:center}.eyebrow span{background:#d2f78d;padding:4px 11px;border-radius:30px;letter-spacing:1px}.hero{display:grid;grid-template-columns:1.6fr 1fr;gap:65px;padding:28px 0 55px;align-items:center}.kicker{font-size:18px;margin:12px 0}h1{font-family:Georgia,serif;font-size:clamp(44px,6vw,76px);font-weight:400;line-height:1.07;letter-spacing:-3px;white-space:pre-line;margin:20px 0 26px}.subtitle{max-width:460px;font-size:18px}.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:25px}.tags span{border:1px solid #28585777;border-radius:30px;padding:5px 12px;font-size:14px}.sequence{background:#6638ba;color:#e9ddfc;padding:28px;border-radius:7px 50px 7px 7px;transform:rotate(2deg);box-shadow:12px 12px 0 #83beb6}.sequence p{font-size:12px;letter-spacing:2px;margin:0 0 12px}.tiles{display:flex;gap:10px;margin-bottom:22px}.tiles b{font-size:32px;line-height:1;padding:15px 18px;background:#d4fa8c;color:#2a3d36;border-radius:8px;flex:1;text-align:center}.shuffled b{background:#9cd9d3}.rule{height:1px;background:#c9aeed77;margin:22px 0}.sequence strong{font-family:Georgia,serif;font-size:27px;line-height:1.3;font-weight:400}.reading{display:grid;grid-template-columns:230px 1fr;gap:70px;border-top:1px solid #28585744;padding-top:45px}aside{align-self:start;position:sticky;top:25px}aside p{font-size:12px;letter-spacing:2px;font-weight:700}aside a{display:block;text-decoration:none;font-size:14px;margin:18px 0}aside a:hover{text-decoration:underline}article section{margin-bottom:40px;scroll-margin-top:25px}h2{font-family:Georgia,serif;font-size:30px;font-weight:400;line-height:1.3;margin:0 0 18px}h3{font-size:16px}.prose{white-space:pre-line;margin:0;line-height:1.8}pre{background:#254c60;color:#dafaad;padding:25px;overflow:auto;border-radius:14px;font-size:14px;line-height:1.7}.demo{background:#a3ccf0;border:1px solid #678db5;padding:34px;border-radius:20px;margin:30px 0}.section-head{display:flex;justify-content:space-between;align-items:center;gap:20px}.packet-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:25px}.packet-buttons button{background:#d8a8eb;border:0;border-radius:12px;text-align:left;padding:20px;font-size:19px;box-shadow:0 4px 0 #9f7ab5}.packet-buttons span,.packet-buttons small{display:block;font-size:12px;letter-spacing:1px}.packet-buttons span{margin-bottom:12px}.packet-buttons small{margin-top:15px;font-size:14px;letter-spacing:0;font-weight:400}.notice{font-weight:700;font-size:15px;min-height:24px}.lab-grid{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:16px}.lab-grid>div{background:#bee8df;padding:18px;border-radius:12px}.lab-grid h3{margin-top:0}.lab-grid p{font-size:15px}.lab-grid .chat{background:#cdeeab}.chat p{background:#a8d783;padding:9px;border-radius:9px}.demo-note{font-size:13px;margin-bottom:0}.status{background:#def59f;padding:14px 20px;border-radius:10px;margin:0 0 25px}.editor{background:#bcdcd5;border:1px solid #739d96;padding:30px;border-radius:20px;margin-bottom:30px}.editor label{display:block;font-size:14px;font-weight:700;margin:20px 0}.editor input,.editor textarea{display:block;width:100%;margin-top:8px;border:1px solid #72988f;border-radius:8px;background:#dceacb;color:#18383c;padding:12px;font-size:16px}.editor textarea{min-height:100px;resize:vertical}.editor .body-input{min-height:230px}.solid{background:#6939ba;color:#f0e9fe}footer{border-top:1px solid #28585744;padding:20px 0;display:flex;justify-content:space-between;gap:15px;font-size:13px}@media(max-width:800px){header{padding:18px 20px}.journal{display:none}main{padding:25px 20px}.hero{grid-template-columns:1fr;gap:25px;padding-bottom:40px}.sequence{max-width:430px;transform:none}.reading{grid-template-columns:1fr;gap:20px}aside{position:static;display:flex;gap:15px;flex-wrap:wrap}aside p{width:100%;margin-bottom:0}aside a{margin:0}.demo{padding:22px}.section-head{align-items:start;flex-direction:column}.lab-grid{grid-template-columns:1fr}.packet-buttons{gap:8px}.packet-buttons button{padding:12px;font-size:16px}.packet-buttons span{font-size:10px}.packet-buttons small{font-size:12px}h1{letter-spacing:-2px}footer{flex-direction:column}}
+
+article section{padding:32px;border-radius:18px;border:1px solid #51787955;box-shadow:0 5px 0 #3e697b12}article section:nth-child(6n+1){background:#9cded5}article section:nth-child(6n+2){background:#bfc2f3}article section:nth-child(6n+3){background:#e7c78e}article section:nth-child(6n+4){background:#a7d6f1}article section:nth-child(6n+5){background:#d8ade6}article section:nth-child(6n){background:#bcdf8e}.reading{grid-template-columns:220px 1fr;gap:35px}aside{max-height:90vh;overflow:auto;padding-right:10px}aside a{margin:13px 0}.owner-signin{font-size:14px}.prose{line-height:1.85}article h2{font-size:29px}@media(max-width:800px){.reading{grid-template-columns:1fr}article section{padding:24px 20px}aside{max-height:none}article h2{font-size:26px}}
+
+body{background-color:#91dcec;background-image:radial-gradient(circle,#316a8d28 1.3px,transparent 1.6px),radial-gradient(ellipse at 0% 0%,#c3a0ef 0,transparent 48%),radial-gradient(ellipse at 100% 40%,#f8b773 0,transparent 52%),linear-gradient(145deg,#71e2cf,#a3c5fa 55%,#e8a4df);background-size:22px 22px,100% 100%,100% 100%,100% 100%;background-attachment:fixed}header{background:#a2d4edb8;border-radius:0 0 22px 22px;backdrop-filter:blur(8px)}article section{position:relative;overflow:hidden;border:1px solid #3b659555;box-shadow:7px 8px 0 #7042a821;background-image:repeating-linear-gradient(135deg,transparent 0,transparent 17px,#29496108 17px,#29496108 19px);border-radius:24px 8px 24px 8px}article section:nth-child(6n+1){background-color:#83e0cc}article section:nth-child(6n+2){background-color:#b5b3f5}article section:nth-child(6n+3){background-color:#f6c576}article section:nth-child(6n+4){background-color:#8ecdf4}article section:nth-child(6n+5){background-color:#dfa0e4}article section:nth-child(6n){background-color:#b5e477}article h2{padding-bottom:16px;border-bottom:2px solid #274d6b33}aside{background:#b7d7f4da;border:1px solid #6481b355;padding:18px;border-radius:18px}aside a{padding:5px 8px;border-radius:7px}aside a:hover{background:#cfb0f3;text-decoration:none}.demo{background-color:#b5a4ed;background-image:radial-gradient(circle at 10px 10px,#67459515 2px,transparent 2.4px);background-size:22px 22px;border:2px solid #8b62c7;box-shadow:8px 8px 0 #3c839b33}.packet-buttons button{background:#f5b578}.packet-buttons button:nth-child(2){background:#d3f27c}.packet-buttons button:nth-child(3){background:#e6a4d7}.sequence{background:#7034c3;background-image:repeating-linear-gradient(135deg,#f8b1ed12 0,#f8b1ed12 2px,transparent 2px,transparent 15px)}.eyebrow span{background:#efd170}.tags span{background:#bde9dc9c}.hero h1{color:#27416a}footer{background:#abd7efb8;padding:20px;border-radius:12px}@media(max-width:800px){aside{position:static}body{background-attachment:scroll}article section{box-shadow:4px 5px 0 #7042a821}}
+
+[contenteditable="true"]{outline:2px dashed #6638ba;outline-offset:5px}.offline-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.offline-tip{font-size:14px} @media print{header button,.offline-tip,.packet-buttons{display:none}aside{position:static}article section{break-inside:avoid}body{background:#b6e7dd}}
+.opening-credit{font-size:14px;font-weight:800;letter-spacing:1px;color:#34456b;margin:18px 0 22px;line-height:1.6}
+</style></head><body>
+<header><a class="brand" href="#"><span class="mark">Q</span> in sequence<span class="journal"> / THE DATA STRUCTURES JOURNAL</span></a></header>
+<main><div class="eyebrow">COMMUNICATION SYSTEMS <span>PROBLEM 20</span></div><section class="hero"><div><p class="kicker">A detailed guide to message queues for chat applications</p><h1>Every message.
+In the right order.</h1><p class="opening-credit">BY S.SIVASRI AND AYUSH SINGH</p><p class="subtitle">When packets take different paths, a little structure keeps the conversation together.</p><div class="tags"><span>FIFO queue</span><span>Sequence numbers</span><span>Reorder buffer</span></div></div><div class="sequence"><p>SENT IN ORDER</p><div class="tiles"><b>01</b><b>02</b><b>03</b></div><p>ARRIVES OUT OF ORDER</p><div class="tiles shuffled"><b>03</b><b>01</b><b>02</b></div><div class="rule"></div><strong>Same conversation.<br>Correct sequence.</strong></div></section><div class="reading"><aside><p>IN THIS ARTICLE</p><a href="#section-0">01) The problem: order matters</a><a href="#section-1">02) Why messages can arrive out of order</a><a href="#section-2">03) The structures we need</a><a href="#section-3">04) The receiving algorithm, step by step</a><a href="#section-4">05) A complete worked example</a><a href="#section-5">06) Why the algorithm preserves order</a><a href="#section-6">07) Data-structure pseudocode</a><a href="#section-7">08) Missing messages, retries and acknowledgements</a><a href="#section-8">09) Reconnections, persistence and duplicates</a><a href="#section-9">10) Complexity and choosing the right container</a><a href="#section-10">11) Test cases and common mistakes</a><a href="#section-11">12) Conclusion</a><a href="#demo">13) Demo</a></aside><article><section id="section-0"><h2>01) The problem: order matters</h2><p class="prose">Problem 20 asks us to design a structure that ensures messages between two users are delivered and displayed in exactly the order they were sent, even when the network delivers them out of order. The suggested approach is a queue with sequence numbering and a reorder buffer.
+
+Imagine Asha sends three messages to Ravi: “Hi!”, “Are you free?” and “Let’s meet.” These are messages 1, 2 and 3. If Ravi sees “Let’s meet” before “Hi”, the conversation feels confusing even though all three messages eventually arrive. Our goal is to preserve the sender’s intended sequence at the receiver.
+
+The important distinction is between arrival and display. We cannot force a delayed packet to arrive earlier, but we can decide when a received message becomes visible. A later message may be accepted into temporary storage without being displayed immediately.
+
+This solution handles one ordered sender stream. For a two-way chat, each direction can maintain its own sequence state. Establishing one shared order across messages from both users is a separate requirement.</p></section><section id="section-1"><h2>02) Why messages can arrive out of order</h2><p class="prose">Messages pass through networks, servers and application components before reaching the recipient. Different processing delays, retries, concurrent requests or reconnections can make a later application message available before an earlier one. For example, message 1 may require a retry while message 3 completes quickly.
+
+Be precise about the transport: TCP provides an ordered byte stream within one connection, and WebSocket messages on a single connection inherit that ordering. We do not need to repair packet ordering inside TCP ourselves. Application-level sequence numbers become useful when messages span multiple connections, independent operations, asynchronous workers or reconnect/replay paths.
+
+For this exam problem, assume the receiver’s input can be out of order. It might receive 3 → 1 → 2 even though the sender created 1 → 2 → 3. The receiver should ultimately display 1 → 2 → 3.
+
+A timestamp is not a reliable substitute for a sequence number. Clock differences and equal timestamps can make comparisons ambiguous. A sequence number directly identifies the intended position within a stream.</p></section><section id="section-2"><h2>03) The structures we need</h2><p class="prose">1. Sender FIFO queue
+FIFO means “first in, first out”. New messages join at the rear; the sender processes messages from the front. This preserves creation order locally. Assign a sequence number atomically when each message enters the stream so two simultaneous sends cannot accidentally receive the same number.
+
+2. Sequence number
+Every message carries a positive integer: 1, 2, 3 and so on. The number belongs to a particular stream, not to all users globally. A practical message also carries a conversation identifier, sender identifier, session or stream identifier, and payload.
+
+3. Reorder buffer
+Use a hash map whose key is the sequence number and whose value is the message. For example, {3: “Let’s meet”} means message 3 arrived but cannot yet be shown. A map lets us check directly whether the next expected message exists without sorting every arrival.
+
+4. Expected sequence counter
+This stores the smallest sequence number that has not yet been displayed. It starts at 1 for a new stream. After displaying message 1 it becomes 2, and after displaying message 2 it becomes 3.
+
+5. Display queue or ordered output
+Only messages released in consecutive order enter the visible chat. The UI may append them directly or consume an ordered queue. The key requirement is that displaying a batch must preserve the batch’s order.
+
+Queue operations and representation
+ENQUEUE adds a message at the rear. DEQUEUE removes the message at the front. FRONT reads the next message without removing it, and IS_EMPTY checks whether there is anything to send. A queue can be represented by a linked list with front and rear pointers, or by a circular array with front and rear indices. With a linked list, keep both pointers so insertion at the rear and removal at the front take O(1) time. A circular array reuses freed slots, but a fixed-size queue needs a full-capacity policy.
+
+Reorder-buffer operations
+The buffer is a map, not the sender FIFO queue. INSERT stores a message under its sequence number; CONTAINS checks whether a sequence is present; GET reads its message; REMOVE deletes it after release. The receiver asks for one exact key—expected—so it does not need to sort the entire map.
+
+Message record
+A message record contains stream_id, sequence and payload. The queue stores these records. At the receiver, stream_id selects the correct state, sequence selects the map entry, and payload supplies the text to display. The display queue receives records only after gaps have been filled.</p></section><section id="section-3"><h2>04) The receiving algorithm, step by step</h2><p class="prose">Step 1 — Identify the stream.
+Look up the receiver state for this conversation and sender stream. Each stream has its own expected counter and reorder buffer. Do not combine unrelated users’ sequence numbers in a single buffer.
+
+Step 2 — Check for an old duplicate.
+If the arriving sequence number is smaller than expected, the message was already released. Ignore it for display. A retry or replay can produce such duplicates; showing them again would repeat the conversation.
+
+Step 3 — Buffer a new arrival.
+If the sequence is not already in the buffer, store the message under that sequence number. A second copy of a buffered message should not create another entry. If two different payloads claim the same stream and sequence, treat that as a protocol conflict rather than silently replacing data.
+
+Step 4 — Release the consecutive prefix.
+While the buffer contains expected, remove that message, display it, and increment expected. Repeat because one arrival may unlock several messages that were waiting.
+
+Step 5 — Stop at a gap.
+As soon as expected is absent, stop releasing. Keep later messages buffered. This deliberate pause is what prevents a later message from overtaking an earlier one.
+
+All these state changes must be processed serially or protected by appropriate synchronization. Two concurrent handlers updating the same counter can otherwise introduce duplicates or lose updates.</p></section><section id="section-4"><h2>05) A complete worked example</h2><p class="prose">Suppose the sender creates:
+#1 — Hi!
+#2 — Are you free?
+#3 — Let’s meet.
+
+Before any arrival, expected = 1, the buffer is empty, and the receiver’s chat is empty.
+
+Arrival #3: store message 3. The buffer contains {3}. We still need message 1, so nothing is displayed. expected remains 1.
+
+Arrival #1: store message 1. Since the buffer now contains expected = 1, remove and display “Hi!”. Increment expected to 2. Message 2 is missing, so stop. Message 3 remains buffered.
+
+Arrival #2: store message 2. Remove and display “Are you free!”, then increment expected to 3. Message 3 is already present, so remove and display “Let’s meet.” Increment expected to 4.
+
+The final visible sequence is 1 → 2 → 3, although arrival order was 3 → 1 → 2. The buffer is now empty. If another copy of message 2 arrives, its number is less than expected = 4, so it is ignored.
+
+Notice that message 3 did not need to be resent merely because it arrived early. The reorder buffer retained it until the missing prefix became available.</p></section><section id="section-5"><h2>06) Why the algorithm preserves order</h2><p class="prose">The central invariant is: before each receive operation, every sequence number smaller than expected has already been released, and expected is the next sequence allowed to become visible.
+
+Initially expected = 1, so no messages have been displayed and the invariant holds. Receiving a later message only stores it; this does not change the visible order. Receiving an older duplicate leaves the state unchanged.
+
+The only release operation displays the message numbered exactly expected. It then increments the counter by one. Therefore every released message follows its predecessor. Repeating this operation releases a consecutive block, never a sequence with a gap.
+
+This establishes the safety property: the receiver never displays a later sequence before an earlier one within the same stream. It does not establish eventual delivery. For progress, the missing message must eventually arrive, usually through a retry mechanism.
+
+This is also why an ordinary FIFO receiver queue is insufficient. It preserves insertion order, but insertion order at the receiver is arrival order. Sequence numbers and the buffer supply the missing knowledge about send order.</p></section><section id="section-6"><h2>07) Data-structure pseudocode</h2><p class="prose">The following pseudocode describes abstract operations rather than a programming-language implementation. The sender uses a FIFO queue; the receiver uses a map as its reorder buffer and a FIFO queue for ordered display.
+
+State at the sender
+outgoing is an initially empty FIFO queue. nextSequence starts at 1. When the user creates a message, construct a record with its stream identifier, sequence number and text, then enqueue it. Increment nextSequence so the following message receives the next number. Sending removes records from the front of outgoing.
+
+State at the receiver
+Each sender stream has an initially empty buffer, an expected counter starting at 1, and an initially empty displayQueue. The buffer stores records by sequence number. The display queue stores only consecutive records that are ready for the interface.
+
+Reading the receive procedure
+A sequence below expected is an old duplicate. A sequence already buffered is a duplicate waiting behind a gap. Otherwise, insert it into the map. The WHILE loop then moves the consecutive prefix into displayQueue, stopping when the next expected key is missing.
+
+Why use WHILE instead of IF?
+One arrival can unlock several records. With message 3 buffered and expected = 2, receiving message 2 releases both 2 and 3. An IF would release only 2 and leave 3 unnecessarily waiting.
+
+Scope of the pseudocode
+Operations on the same stream are serialized. Sequence numbers are valid positive integers; stream identifiers are already validated. SEND_TO_NETWORK represents transmission, while DISPLAY represents appending to the chat. Retries, acknowledgements and durable commits are extensions discussed in the following sections.</p><h3>Queue and reorder-buffer pseudocode</h3><pre><code>RECORD Message:
+    streamId
+    sequence
+    payload
+
+SENDER STATE (for one stream):
+    outgoing ← EMPTY FIFO QUEUE
+    nextSequence ← 1
+
+PROCEDURE CREATE_MESSAGE(streamId, text):
+    message ← Message(streamId, nextSequence, text)
+    ENQUEUE(outgoing, message)
+    nextSequence ← nextSequence + 1
+
+PROCEDURE SEND_PENDING_MESSAGES():
+    WHILE NOT IS_EMPTY(outgoing):
+        message ← DEQUEUE(outgoing)
+        SEND_TO_NETWORK(message)
+        // Retain a retry copy if reliable delivery is required.
+
+RECEIVER STATE (separate state for each stream):
+    expected ← 1
+    buffer ← EMPTY MAP
+    displayQueue ← EMPTY FIFO QUEUE
+
+PROCEDURE RECEIVE(message):
+    state ← STATE_FOR(message.streamId)
+    seq ← message.sequence
+
+    IF seq &lt; state.expected:
+        RETURN                 // Already released: old duplicate
+
+    IF CONTAINS(state.buffer, seq):
+        RETURN                 // Already buffered: duplicate
+
+    INSERT(state.buffer, seq, message)
+
+    WHILE CONTAINS(state.buffer, state.expected):
+        ready ← GET(state.buffer, state.expected)
+        REMOVE(state.buffer, state.expected)
+        ENQUEUE(state.displayQueue, ready)
+        state.expected ← state.expected + 1
+
+PROCEDURE UPDATE_CHAT(streamId):
+    state ← STATE_FOR(streamId)
+    WHILE NOT IS_EMPTY(state.displayQueue):
+        message ← DEQUEUE(state.displayQueue)
+        DISPLAY(message.payload)
+
+EXAMPLE:
+    RECEIVE(message #3)  → buffer {3},     displayQueue []
+    RECEIVE(message #1)  → buffer {3},     displayQueue [1]
+    RECEIVE(message #2)  → buffer {},      displayQueue [1, 2, 3]
+    UPDATE_CHAT(stream)  → visible order: 1, 2, 3</code></pre></section><section id="section-7"><h2>08) Missing messages, retries and acknowledgements</h2><p class="prose">Consider arrivals 1 and 3 when message 2 is lost. Message 1 appears, but message 3 waits. The receiver cannot safely invent message 2 or silently skip it while claiming exact ordering.
+
+The sender can retain unacknowledged messages and resend them after a timeout. A receiver can report the highest consecutively accepted sequence, or explicitly request missing sequence 2. Duplicate suppression is essential because acknowledgements can also be delayed or lost.
+
+Define what “acknowledged” means. An acknowledgement for temporary receipt is different from one for durable storage or committed delivery. If the receiver acknowledges before saving state, a crash may lose data that the sender believes is safe.
+
+This pause is called head-of-line blocking: one missing earlier message delays all later messages in the same ordered stream. It is the cost of strict ordering. Independent streams can continue while the affected stream waits.
+
+If a message permanently cannot be delivered, the product needs an explicit recovery policy. It may show a delivery error and halt the stream, or introduce an agreed gap marker. Skipping without such a policy changes the original guarantee.</p></section><section id="section-8"><h2>09) Reconnections, persistence and duplicates</h2><p class="prose">A reconnect should not automatically reset expected to 1 while continuing the same stream. Old packets could then be mistaken for new messages, and newly assigned numbers might collide with earlier ones.
+
+Two common designs are: persist and resume the existing stream’s sequence state, or create a fresh stream identifier for the new session. If sessions are separate streams, ordering across them still needs a defined reconciliation rule.
+
+Persist the sender’s next number and outstanding messages if they must survive a crash. On the receiver, persist committed progress and any necessary buffered messages. Coordinate advancing expected with committing the message so a crash cannot leave progress ahead of stored data.
+
+Retries commonly produce at-least-once transport behavior: the same message may arrive multiple times. The ordering layer can suppress duplicates within its remembered stream state, but this alone does not guarantee exactly-once side effects across crashes. For external actions, such as issuing a notification, use idempotent operations or durable deduplication records.
+
+A useful message identity is the tuple (conversation ID, sender ID, stream ID, sequence number). This distinguishes message 3 in one conversation from message 3 in another.</p></section><section id="section-9"><h2>10) Complexity and choosing the right container</h2><p class="prose">A FIFO queue implemented with a deque supports enqueue and dequeue in O(1) time. A hash-map reorder buffer supports insertion, duplicate checks and lookup of expected in O(1) expected time per operation.
+
+One receive call may release k waiting messages, so its work is O(k + 1) expected. Across n processed arrivals, each accepted message is inserted at most once and removed at most once; total expected processing is O(n). These bounds assume well-behaved hashing and do not include network, storage or rendering costs.
+
+Buffer space is O(b), where b is the number of messages waiting behind gaps. Sender retry storage is a separate cost. If missing messages never arrive and later traffic continues, an unbounded buffer can grow indefinitely.
+
+Set a maximum receive window, message-size limit and buffer capacity. Reject or defer packets far beyond expected and ask the sender to retransmit within the allowed window. Report this condition rather than silently dropping messages while promising reliable delivery.
+
+A min-heap can reveal the smallest buffered sequence, with O(log b) insertion and removal, but it still needs gap detection and duplicate handling. A hash map is simpler when the main operation is “does the exact expected number exist?”. A fixed ring buffer is another option for a bounded sequence window, provided wraparound is handled carefully.</p></section><section id="section-10"><h2>11) Test cases and common mistakes</h2><p class="prose">Test normal arrivals 1 → 2 → 3: every message should be released immediately. Test reversed arrivals 3 → 2 → 1: nothing should appear until 1 arrives, then the entire consecutive block should be released.
+
+Test duplicates before and after release. For 3 → 3 → 1 → 2 → 2, message 3 should occupy only one buffer entry and message 2 should appear only once. Test a gap such as 1 → 3: the visible output must stop at 1.
+
+Test multiple streams with overlapping sequence numbers. Asha’s message 1 and Ravi’s message 1 must not overwrite one another. Test reconnect behavior and invalid sequence numbers, including negative numbers, oversized values and numbers outside the receive window.
+
+Common mistakes include sorting only the packets currently available and displaying all of them, using arrival order as send order, incrementing expected before committing delivery, and resetting counters without a new stream identity.
+
+The interactive lab below lets you try all six permutations of three packets, repeat a packet to test duplicate handling, and stop before filling a gap to see why later messages remain buffered.</p></section><section id="section-11"><h2>12) Conclusion</h2><p class="prose">Data structure: use a FIFO sender queue, unique sequence numbers within each stream, and a hash-map reorder buffer at the receiver. Maintain an expected counter identifying the next message that may be displayed.
+
+Algorithm: enqueue messages in creation order and attach increasing sequence numbers. At the receiver, ignore already displayed duplicates, buffer new arrivals, and repeatedly release the message numbered expected while it is present. Increment expected after each release and stop at the first missing number.
+
+Example: for arrival order 3 → 1 → 2, buffer 3, display 1, then display 2 and buffered 3. The final chat order is 1 → 2 → 3.
+
+Complexity: O(1) expected map work per insertion or lookup; O(k) expected work to release k messages; O(n) expected total processing over n arrivals; O(b) receiver buffer space. Retries, durable state and a receive-window limit support a practical implementation.
+
+The queue preserves the sender’s local order, sequence numbers identify that order, and the reorder buffer delays early arrivals until the missing prefix is complete. Together they solve the ordering problem; retransmission and durable state address delivery and recovery.</p></section></article></div>
+<section class="demo" id="demo"><div class="section-head"><div><p class="eyebrow">13) Demo</p><h2>Deliver 3, then 1, then 2.</h2></div><button onclick="reset()">Reset demo</button></div><p>Click the packets in any order. A message appears only when every earlier message has arrived.</p><div class="packet-buttons"><button onclick="deliver(1)"><span>PACKET 01</span>Hi!<small>Deliver packet</small></button><button onclick="deliver(2)"><span>PACKET 02</span>Are you free?<small>Deliver packet</small></button><button onclick="deliver(3)"><span>PACKET 03</span>Let’s meet.<small>Deliver packet</small></button></div><p class="notice" id="notice" aria-live="polite"></p><div class="lab-grid"><div><h3>Arrival history</h3><p id="arrivals"></p></div><div><h3>Reorder buffer</h3><p id="buffer"></p><small id="expected"></small></div><div class="chat"><h3>Receiver’s chat</h3><div id="chat"></div></div></div><p class="demo-note">Interactive simulation of one sender stream. Network transmission and retries are not simulated.</p></section><footer><span>in sequence / Problem 20</span><span>Queue + sequence numbering + reorder buffer</span></footer></main><script>let expected=1,buffer=new Map(),shown=[],arrivals=[];const messages=['Hi!','Are you free?',"Let's meet."];
+function render(){document.getElementById('arrivals').textContent=arrivals.length?arrivals.join(' → '):'No packets delivered';document.getElementById('buffer').textContent=buffer.size?[...buffer.keys()].sort((a,b)=>a-b).map(n=>'#'+n).join(' · '):'Empty';document.getElementById('expected').textContent='Next expected: '+expected;const chat=document.getElementById('chat');chat.replaceChildren();if(!shown.length){const e=document.createElement('p');e.textContent='Waiting for message #1';chat.append(e);}for(const n of shown){const e=document.createElement('p');e.textContent='#'+n+' '+messages[n-1];chat.append(e);}}
+function deliver(n){arrivals.push(n);let notice;if(n<expected||buffer.has(n))notice='Packet '+n+' is a duplicate; ignored.';else{buffer.set(n,messages[n-1]);const before=expected;while(buffer.has(expected)){shown.push(expected);buffer.delete(expected++);}notice=before===expected?'Packet '+n+' is waiting for packet '+expected+'.':'Released messages in order. Next expected: '+expected+'.';}document.getElementById('notice').textContent=notice;render();}
+function reset(){expected=1;buffer=new Map();shown=[];arrivals=[];document.getElementById('notice').textContent='Choose a packet to deliver it.';render();}
+reset();</script></body></html>
